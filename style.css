@@ -1,16 +1,92 @@
+@import url('https://fonts.googleapis.com/css2?family=Lato&family=Source+Sans+Pro&display=swap');
+
+html {
+  font-family: 'Lato', sans-serif;
+  font-family: 'Source Sans Pro', sans-serif;
+}
+
+body {
+  background-color: white;
+}
+
 .grid {
-    display: grid;
-    width: 300px;
-    height: 300px;
-    grid-template-columns: repeat(3, 100px);
-    grid-template-rows: repeat(3, 100px);
-    border: 1px solid black;
+  display: grid;
+  grid-template-columns: repeat(3, 150px);
+  grid-template-rows: repeat(3, 150px);
+  border: 1px solid white;
+  gap: 10px;
 }
 
 .grid div {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid black;
 }
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2em;
+  padding: 20px;
+  padding-bottom: 20px;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.info {
+    height: 20px;
+    margin-bottom: 20px;
+    margin-top: 20px;
+}
+
+.sign-x {
+  background-color: #facc15;
+  outline: white;
+}
+
+.sign-o {
+  background-color: #ef4444;
+}
+
+button {
+    border: 1px solid black;
+    padding: 10px;
+    width: 60px;
+    background-color: white;
+}
+
+.mode--easy {
+    background-color: #facc15;
+}
+
+.mode--hard {
+    background-color: #ef4444;
+}
+
+.mode--easy:hover {
+    background-color: #06b6d4;
+    letter-spacing: 1px;
+}
+
+.mode--hard:hover {
+    background-color: #06b6d4;
+    letter-spacing: 1px;
+}
+
+.reset {
+    margin-top: 20px;
+    width: 100px;
+}
+
+.reset:hover {
+    background-color: #22c55e;
+}
+
 

@@ -1,7 +1,5 @@
 const gameBoard = (() => {
-  //let board = ['', '', '', '', '', '', '', '', ''];
-  let board = ['X', 'O', 'X', '', '', '', '', 'O', ''];
-
+  let board = ['', '', '', '', '', '', '', '', ''];
   const getBoard = () => {
     return board;
   };
@@ -28,11 +26,6 @@ const gameBoard = (() => {
   };
 })();
 
-/////////////////
-/////////////////
-///////////////
-///////////////////
-
 const Player = (name, sign) => {
   const getName = () => {
     return name;
@@ -48,17 +41,27 @@ const Player = (name, sign) => {
   };
 };
 
-/////////////////
-/////////////////
-///////////////
-///////////////////
-
 const gameControl = (() => {
-  let player1 = Player('Linas', 'X');
-  let player2 = Player('NPC', 'O');
+  let player1 = Player('Player', 'X');
+  let player2 = Player('Computer', 'O');
   let turnNumber = 0;
   let activePlayer = player1;
   let gameOver = false;
+  let easyMode = true;
+
+  const toggleMode = () => {
+    easyMode === true ? easyMode = false : easyMode = true;
+  }
+
+  const getAvailableFields = (board = gameBoard.getBoard()) => {
+    let availableFields = [];
+    for (let i = 0; i < board.length; i++) {
+      if (board[i] === '') {
+        availableFields.push(i);
+      }
+    }
+    return availableFields;
+  };
 
   const move = (square) => {
     if (gameOver === false) {
@@ -67,13 +70,6 @@ const gameControl = (() => {
       };
 
       let success = turn();
-
-      if (activePlayer === player2 && !success) {
-        while (!success) {
-          square = computerMove();
-          success = turn();
-        }
-      }
 
       if (success) {
         turnNumber++;
@@ -84,23 +80,32 @@ const gameControl = (() => {
     }
   };
 
-  const computerMove = () => {
-    minimax();
-
-    //random
-    min = Math.ceil(0);
-    max = Math.floor(8);
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  };
-
   const nextTurn = () => {
     activePlayer === player2
       ? (activePlayer = player1)
       : (activePlayer = player2);
 
     if (activePlayer === player2) {
-      // move(computerMove());
-      minimax();
+      const getRandom = (maxNumber = 8) => {
+        min = Math.ceil(0);
+        max = Math.floor(maxNumber);
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      };
+
+      let spot = minimax();
+
+      if (easyMode === true) {
+        let available = getAvailableFields();
+        let random = available[getRandom(available.length - 1)];
+
+        while (random === spot && available.length !== 0) {
+          random = available[getRandom(available.length - 1)];
+        }
+
+        spot = random;
+      }
+
+      move(spot);
     }
   };
 
@@ -126,92 +131,72 @@ const gameControl = (() => {
       }
     }
 
-    let box = [];
+    const run = (state, sign, depth) => {
+      let moves = [];
 
-    const run = (state, sign) => {
-      const printState = (board = state) => {
-        console.log('RESULT CHECK FOR:');
-        let line = '';
-        for (let i = 0; i < board.length; i++) {
-          let field = board[i];
-          if (field === '') {
-            field = '#';
-          }
+      let result = positionChecker(state);
 
-          line = line + field + ' ';
-
-          if (i === 2 || i === 5 || i === 8) {
-            console.log(`${line}\n`);
-            line = '';
-          }
-        }
-      };
-      let scores = [];
-      let states = [];
-
-      const getResult = (state) => {
-        let result = positionChecker(state);
-
-        if (result !== null) {
-          if (result === 'X') {
-            return 10;
-          }
-
-          if (result === 'O') {
-            return -10;
-          }
-
-          if (result === 'tie') {
-            return 0;
-          }
-
-          return null;
-        }
-        console.log(`--- RESULT: ${result}`);
-      };
-
-      printState();
-      let result = getResult(state);
-
-      console.log(result);
-
-      if (result === undefined) {
-      
-        availableFields = [];
-
-        for (let i = 0; i < state.length; i++) {
-          if (state[i] === '') {
-            availableFields.push(i);
-          }
-        }
-
-        console.log('AVAILABLE FIELDS: ' + availableFields);
-
-        availableFields.forEach((field) => {
-          let board = [...state];
-          board[field] = sign;
-          states.push({board, scores});
-        });
-
-        sign === 'O' ? (sign = 'X') : (sign = 'O');
-
-        states.forEach((state) => {
-          let foo = run(state.board, sign);
-
-          console.log(foo);
-          if (foo !== undefined) {
-            state.scores.push(foo);
-            printState(state);
-            console.log(state.scores);
-            console.log(states);
-            box.push(state);
-            console.dir(box);
-          }
-        });
+      if (result === 'X') {
+        return { score: 10 - depth };
       }
-      return result;
+
+      if (result === 'O') {
+        return { score: depth - 10 };
+      }
+
+      if (result === 'tie') {
+        return { score: 0 };
+      }
+
+      for (let i = 0; i < state.length; i++) {
+        if (state[i] === '') {
+          let board = [...state];
+          board[i] = sign;
+
+          let move = {};
+          move.index = i;
+
+          if (sign === 'X') {
+            let nextMove = run(board, 'O', depth + 1);
+            move.score = nextMove.score;
+          }
+
+          if (sign === 'O') {
+            let nextMove = run(board, 'X', depth + 1);
+            move.score = nextMove.score;
+          }
+
+          moves.push(move);
+        }
+      }
+
+      let bestMove;
+
+      if (sign === 'X') {
+        let bestScore = -11;
+        for (let i = 0; i < moves.length; i++) {
+          if (moves[i].score > bestScore) {
+            bestScore = moves[i].score;
+            bestMove = i;
+          }
+        }
+      }
+
+      if (sign === 'O') {
+        let bestScore = 11;
+        for (let i = 0; i < moves.length; i++) {
+          if (moves[i].score < bestScore) {
+            bestScore = moves[i].score;
+            bestMove = i;
+          }
+        }
+      }
+
+      return moves[bestMove];
     };
-    console.dir(run(boardTest, activePlayer) + "fafafafafafa");
+
+    let bestMove = run(boardTest, activePlayer, 0);
+    return bestMove.index;
   };
 
   const positionChecker = (board = gameBoard.getBoard()) => {
@@ -238,8 +223,6 @@ const gameControl = (() => {
 
     let signs = ['X', 'O'];
 
-    console.log('----------------------------------');
-
     if (availableFields.length === 0) {
       result = 'tie';
     }
@@ -252,7 +235,6 @@ const gameControl = (() => {
             counter++;
             if (counter === 3) {
               result = sign;
-              console.log(sign + ': Combo: ' + combo + ', counter:' + counter);
             }
           }
         });
@@ -260,12 +242,6 @@ const gameControl = (() => {
     });
     return result;
   };
-
-  /////////////////////////////
-  ////////////////////////////
-  ////////////////////////////
-  /////////////////////////////
-  /////////////////////////////
 
   const runThroughBoard = (board = gameBoard.getBoard()) => {
     let winCombos = [
@@ -282,26 +258,21 @@ const gameControl = (() => {
 
     let sign = activePlayer.getSign();
 
-    winCombos.forEach((combo) => {
-      let counter = 0;
-      combo.forEach((spot) => {
-        // IESKO TIK VIENO SIGN, REIKTU TURBUT, KAD IESKOTU IR X IR O POZICIJO
-        if (board[spot] === sign) {
-          counter++;
-          if (counter === 3) {
-            console.log(
-              'WINNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN'
-            );
-            result = activePlayer;
-          }
-          console.log('Combo: ' + combo + ', counter:' + counter);
-        }
-      });
-    });
-
     if (turnNumber === 9) {
       result = 'tie';
     }
+
+    winCombos.forEach((combo) => {
+      let counter = 0;
+      combo.forEach((spot) => {
+        if (board[spot] === sign) {
+          counter++;
+          if (counter === 3) {
+            result = activePlayer;
+          }
+        }
+      });
+    });
 
     return result;
   };
@@ -320,19 +291,11 @@ const gameControl = (() => {
     }
   };
 
-  return { move, reset, runThroughBoard };
+  return { move, reset, runThroughBoard, toggleMode };
 })();
 
-/////////////////
-/////////////////
-///////////////
-///////////////////
-/////////////////
-/////////////////
-///////////////
-///////////////////
-
 const displayControl = (() => {
+  const mode = document.querySelector('.mode');
   const grid = document.querySelector('.grid');
   const info = document.querySelector('.info');
   const reset = document.querySelector('.reset');
@@ -347,7 +310,13 @@ const displayControl = (() => {
 
   const update = () => {
     for (i = 0; i < gameBoard.getBoard().length; i++) {
-      squares[i].textContent = gameBoard.getBoard()[i];
+      let field = gameBoard.getBoard()[i];
+      if (field === 'X') {
+        squares[i].classList.add('sign-x');
+      }
+      if (field === 'O') {
+        squares[i].classList.add('sign-o');
+      }
     }
   };
 
@@ -374,7 +343,25 @@ const displayControl = (() => {
     gameControl.reset();
     clear();
     update();
+    squares.forEach((square) => {
+      square.classList.remove('sign-x', 'sign-o');
+    });
   });
+
+  mode.addEventListener('click', () => {
+
+    if (mode.textContent === 'Easy') {
+      mode.textContent = "Hard";
+      mode.classList.toggle('mode--hard');
+      mode.classList.toggle('mode--easy');
+    } else {
+      mode.textContent = "Easy";
+      mode.classList.toggle('mode--hard');
+      mode.classList.toggle('mode--easy');
+    }
+
+    gameControl.toggleMode();
+  })
 
   update();
   return { squares, update, declareResult };
