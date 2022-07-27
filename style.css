@@ -44,6 +44,7 @@ body {
     height: 20px;
     margin-bottom: 20px;
     margin-top: 20px;
+    display: flex;
 }
 
 .sign-x {
@@ -62,20 +63,23 @@ button {
     background-color: white;
 }
 
+.mode {
+  width: 80px;
+}
+
 .mode--easy {
     background-color: #facc15;
+}
+
+.mode--medium {
+  background-color: #22c55e;
 }
 
 .mode--hard {
     background-color: #ef4444;
 }
 
-.mode--easy:hover {
-    background-color: #06b6d4;
-    letter-spacing: 1px;
-}
-
-.mode--hard:hover {
+.mode:hover {
     background-color: #06b6d4;
     letter-spacing: 1px;
 }

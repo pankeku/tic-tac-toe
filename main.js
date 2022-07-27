@@ -3,7 +3,6 @@ const gameBoard = (() => {
   const getBoard = () => {
     return board;
   };
-  const getField = (index) => board[index];
   const setField = (index, sign) => {
     if (!isFieldTaken(index)) {
       board[index] = sign;
@@ -20,186 +19,136 @@ const gameBoard = (() => {
 
   return {
     getBoard,
-    getField,
     setField,
     clear,
+    isFieldTaken,
   };
 })();
 
-const Player = (name, sign) => {
-  const getName = () => {
-    return name;
-  };
-
-  const getSign = () => {
-    return sign;
-  };
-
-  return {
-    getName,
-    getSign,
-  };
-};
-
 const gameControl = (() => {
-  let player1 = Player('Player', 'X');
-  let player2 = Player('Computer', 'O');
-  let turnNumber = 0;
-  let activePlayer = player1;
+  let activePlayer = 'X';
   let gameOver = false;
-  let easyMode = true;
-
-  const toggleMode = () => {
-    easyMode === true ? easyMode = false : easyMode = true;
-  }
-
-  const getAvailableFields = (board = gameBoard.getBoard()) => {
-    let availableFields = [];
-    for (let i = 0; i < board.length; i++) {
-      if (board[i] === '') {
-        availableFields.push(i);
-      }
-    }
-    return availableFields;
-  };
+  let modes = { easy: true, medium: false, hard: false };
 
   const move = (square) => {
-    if (gameOver === false) {
-      let turn = () => {
-        return gameBoard.setField(square, activePlayer.getSign());
-      };
-
-      let success = turn();
-
-      if (success) {
-        turnNumber++;
-
-        checkForWin();
-        nextTurn();
-      }
+    if (!gameOver && gameBoard.setField(square, activePlayer)) {
+      checkResult();
+      nextTurn();
     }
   };
 
   const nextTurn = () => {
-    activePlayer === player2
-      ? (activePlayer = player1)
-      : (activePlayer = player2);
+    activePlayer === 'X' ? (activePlayer = 'O') : (activePlayer = 'X');
 
-    if (activePlayer === player2) {
-      const getRandom = (maxNumber = 8) => {
-        min = Math.ceil(0);
-        max = Math.floor(maxNumber);
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-      };
+    if (activePlayer === 'O') {
+      move(computerChoice());
+    }
+  };
 
-      let spot = minimax();
+  const computerChoice = () => {
+    let square = minimax(gameBoard.getBoard(), activePlayer, 0).index;
 
-      if (easyMode === true) {
-        let available = getAvailableFields();
-        let random = available[getRandom(available.length - 1)];
+    const randomNumber = (maxNumber) => {
+      min = Math.ceil(0);
+      max = Math.floor(maxNumber);
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    };
 
-        while (random === spot && available.length !== 0) {
-          random = available[getRandom(available.length - 1)];
-        }
+    const randomSquare = () => {
+      let available = availableSquares();
+      let randomSquare = available[randomNumber(available.length - 1)];
 
-        spot = random;
+      while (randomSquare === square && available.length !== 0) {
+        randomSquare = available[randomNumber(available.length - 1)];
       }
 
-      move(spot);
+      return randomSquare;
+    };
+
+    if (modes.easy) {
+      square = randomSquare();
     }
+
+    if (modes.medium) {
+      let number = randomNumber(9);
+
+      if (number < 3) {
+        square = randomSquare();
+      }
+    }
+
+    return square;
   };
 
   const reset = () => {
     gameBoard.clear();
-    turnNumber = 0;
-    activePlayer = player1;
+    activePlayer = 'X';
     gameOver = false;
   };
 
-  const minimax = () => {
-    let availableFields = [];
-    let boardTest = [];
-    let activePlayer = 'O';
+  const minimax = (board, sign, depth) => {
+    let moves = [];
+    let bestMove;
 
-    for (let i = 0; i < gameBoard.getBoard().length; i++) {
-      boardTest[i] = gameBoard.getBoard()[i];
+    let result = evaluate(board);
+
+    if (result === 'X') {
+      return { score: 10 - depth };
     }
 
-    for (let i = 0; i < boardTest.length; i++) {
-      if (boardTest[i] === '') {
-        availableFields.push(i);
+    if (result === 'O') {
+      return { score: depth - 10 };
+    }
+
+    if (result === 'tie') {
+      return { score: 0 };
+    }
+
+    for (let i = 0; i < board.length; i++) {
+      if (board[i] === '') {
+        let newBoard = [...board];
+        newBoard[i] = sign;
+
+        let move = {};
+        move.index = i;
+
+        if (sign === 'X') {
+          let nextMove = minimax(newBoard, 'O', depth + 1);
+          move.score = nextMove.score;
+        }
+
+        if (sign === 'O') {
+          let nextMove = minimax(newBoard, 'X', depth + 1);
+          move.score = nextMove.score;
+        }
+
+        moves.push(move);
       }
     }
 
-    const run = (state, sign, depth) => {
-      let moves = [];
-
-      let result = positionChecker(state);
-
-      if (result === 'X') {
-        return { score: 10 - depth };
-      }
-
-      if (result === 'O') {
-        return { score: depth - 10 };
-      }
-
-      if (result === 'tie') {
-        return { score: 0 };
-      }
-
-      for (let i = 0; i < state.length; i++) {
-        if (state[i] === '') {
-          let board = [...state];
-          board[i] = sign;
-
-          let move = {};
-          move.index = i;
-
-          if (sign === 'X') {
-            let nextMove = run(board, 'O', depth + 1);
-            move.score = nextMove.score;
-          }
-
-          if (sign === 'O') {
-            let nextMove = run(board, 'X', depth + 1);
-            move.score = nextMove.score;
-          }
-
-          moves.push(move);
+    if (sign === 'X') {
+      let bestScore = -11;
+      for (let i = 0; i < moves.length; i++) {
+        if (moves[i].score > bestScore) {
+          bestScore = moves[i].score;
+          bestMove = i;
         }
       }
+    }
 
-      let bestMove;
-
-      if (sign === 'X') {
-        let bestScore = -11;
-        for (let i = 0; i < moves.length; i++) {
-          if (moves[i].score > bestScore) {
-            bestScore = moves[i].score;
-            bestMove = i;
-          }
+    if (sign === 'O') {
+      let bestScore = 11;
+      for (let i = 0; i < moves.length; i++) {
+        if (moves[i].score < bestScore) {
+          bestScore = moves[i].score;
+          bestMove = i;
         }
       }
-
-      if (sign === 'O') {
-        let bestScore = 11;
-        for (let i = 0; i < moves.length; i++) {
-          if (moves[i].score < bestScore) {
-            bestScore = moves[i].score;
-            bestMove = i;
-          }
-        }
-      }
-
-      return moves[bestMove];
-    };
-
-    let bestMove = run(boardTest, activePlayer, 0);
-    return bestMove.index;
+    }
+    return moves[bestMove];
   };
 
-  const positionChecker = (board = gameBoard.getBoard()) => {
+  const evaluate = (board = gameBoard.getBoard()) => {
     let winCombos = [
       [0, 1, 2],
       [3, 4, 5],
@@ -211,17 +160,11 @@ const gameControl = (() => {
       [2, 4, 6],
     ];
 
-    let availableFields = [];
-
-    for (let i = 0; i < board.length; i++) {
-      if (board[i] === '') {
-        availableFields.push(i);
-      }
-    }
-
     let result = null;
 
     let signs = ['X', 'O'];
+
+    let availableFields = availableSquares(board);
 
     if (availableFields.length === 0) {
       result = 'tie';
@@ -240,45 +183,12 @@ const gameControl = (() => {
         });
       });
     });
-    return result;
-  };
-
-  const runThroughBoard = (board = gameBoard.getBoard()) => {
-    let winCombos = [
-      [0, 1, 2],
-      [3, 4, 5],
-      [6, 7, 8],
-      [0, 3, 6],
-      [1, 4, 7],
-      [2, 5, 8],
-      [0, 4, 8],
-      [2, 4, 6],
-    ];
-    let result = null;
-
-    let sign = activePlayer.getSign();
-
-    if (turnNumber === 9) {
-      result = 'tie';
-    }
-
-    winCombos.forEach((combo) => {
-      let counter = 0;
-      combo.forEach((spot) => {
-        if (board[spot] === sign) {
-          counter++;
-          if (counter === 3) {
-            result = activePlayer;
-          }
-        }
-      });
-    });
 
     return result;
   };
 
-  const checkForWin = () => {
-    let result = runThroughBoard();
+  const checkResult = () => {
+    let result = evaluate();
 
     if (result !== 'tie' && result !== null) {
       displayControl.declareResult(activePlayer);
@@ -291,7 +201,39 @@ const gameControl = (() => {
     }
   };
 
-  return { move, reset, runThroughBoard, toggleMode };
+  const toggleMode = () => {
+    if (modes.hard) {
+      modes.hard = false;
+      modes.easy = true;
+      return;
+    }
+
+    if (modes.medium) {
+      modes.medium = false;
+      modes.hard = true;
+      return;
+    }
+
+    if (modes.easy) {
+      modes.easy = false;
+      modes.medium = true;
+      return;
+    }
+
+    console.log(modes);
+  };
+
+  const availableSquares = (board = gameBoard.getBoard()) => {
+    let availableFields = [];
+    for (let i = 0; i < board.length; i++) {
+      if (board[i] === '') {
+        availableFields.push(i);
+      }
+    }
+    return availableFields;
+  };
+
+  return { move, reset, toggleMode };
 })();
 
 const displayControl = (() => {
@@ -321,15 +263,26 @@ const displayControl = (() => {
   };
 
   const declareResult = (player) => {
-    if (player === undefined) {
-      info.textContent = "It's a tie!";
+
+    if (player === 'X') {
+      info.textContent = 'Yellow wins!';
       return;
     }
-    info.textContent = `${player.getName()} won!`;
+
+    if (player === 'O') {
+      info.textContent = 'Red wins!';
+      return;
+    }
+
+    info.textContent = 'Tie!';
   };
 
   const clear = () => {
     info.textContent = '';
+
+    squares.forEach((square) => {
+      square.classList.remove('sign-x', 'sign-o');
+    });
   };
 
   squares.forEach((square) =>
@@ -343,26 +296,34 @@ const displayControl = (() => {
     gameControl.reset();
     clear();
     update();
-    squares.forEach((square) => {
-      square.classList.remove('sign-x', 'sign-o');
-    });
   });
 
   mode.addEventListener('click', () => {
-
     if (mode.textContent === 'Easy') {
-      mode.textContent = "Hard";
-      mode.classList.toggle('mode--hard');
+      mode.textContent = 'Medium';
+      mode.classList.toggle('mode--medium');
       mode.classList.toggle('mode--easy');
-    } else {
-      mode.textContent = "Easy";
-      mode.classList.toggle('mode--hard');
-      mode.classList.toggle('mode--easy');
+      gameControl.toggleMode();
+      return;
     }
 
-    gameControl.toggleMode();
-  })
+    if (mode.textContent === 'Medium') {
+      mode.textContent = 'Hard';
+      mode.classList.toggle('mode--hard');
+      mode.classList.toggle('mode--medium');
+      gameControl.toggleMode();
+      return;
+    }
+
+    if (mode.textContent === 'Hard') {
+      mode.textContent = 'Easy';
+      mode.classList.toggle('mode--hard');
+      mode.classList.toggle('mode--easy');
+      gameControl.toggleMode();
+      return;
+    }
+  });
 
   update();
-  return { squares, update, declareResult };
+  return {update, declareResult};
 })();
